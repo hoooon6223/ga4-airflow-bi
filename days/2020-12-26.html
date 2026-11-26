@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merch Shop 운영 · 2020-12-26</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f3f2f1; --card: #ffffff; --line: #e1dfdd; --header: #252423; --header-ink: #ffffff;
+  --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #8a8886;
+  --series-1: #2a78d6; --series-2: #eb6834; --ref: #8a8886; --grid: #edebe9;
+  --good: #0ca30c; --good-ink: #006300; --warning: #fab219; --critical: #d03b3b;
+  --up-ink: #006300; --down-ink: #b3261e;
+  --chip-good: #e6f4e6; --chip-warning: #fff4d6; --chip-critical: #fbe5e5; --chip-muted: #f0efec;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #121211; --card: #1a1a19; --line: #383835; --header: #0b0b0b;
+    --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #9a998f;
+    --series-1: #3987e5; --series-2: #d95926; --ref: #9a998f; --grid: #2a2a28;
+    --up-ink: #5bc95b; --down-ink: #ff8a80;
+    --chip-good: #12301a; --chip-warning: #3a2f0c; --chip-critical: #3d1717; --chip-muted: #2a2a28;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #121211; --card: #1a1a19; --line: #383835; --header: #0b0b0b;
+  --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #9a998f;
+  --series-1: #3987e5; --series-2: #d95926; --ref: #9a998f; --grid: #2a2a28;
+  --up-ink: #5bc95b; --down-ink: #ff8a80;
+  --chip-good: #12301a; --chip-warning: #3a2f0c; --chip-critical: #3d1717; --chip-muted: #2a2a28;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font-family: "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; font-size: 14px; line-height: 1.5; }
+.top { background: var(--header); color: var(--header-ink); padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.top h1 { font-size: 16px; font-weight: 600; margin: 0; }
+.top .date { font-size: 14px; opacity: .85; }
+.top a { color: var(--header-ink); opacity: .8; font-size: 13px; margin-left: auto; }
+main { max-width: 1180px; margin: 0 auto; padding: 16px; }
+.banner { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: 4px; margin-bottom: 14px; border-left: 4px solid; background: var(--card); }
+.banner.good { border-color: var(--good); } .banner.warning { border-color: var(--warning); } .banner.critical { border-color: var(--critical); }
+.banner b { white-space: nowrap; }
+.section-title { font-size: 13px; font-weight: 600; color: var(--ink-2); margin: 18px 0 8px; text-transform: none; }
+.section-title span { font-weight: 400; color: var(--ink-3); }
+.grid { display: grid; gap: 12px; }
+.tiles { grid-template-columns: 1.4fr repeat(4, 1fr); }
+.two { grid-template-columns: 1fr 1fr; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; min-width: 0; }
+.card h3 { font-size: 13px; font-weight: 600; margin: 0 0 10px; color: var(--ink-2); }
+.tile .label { font-size: 13px; color: var(--ink-2); }
+.tile .value { font-size: 26px; font-weight: 600; margin: 2px 0 6px; font-variant-numeric: tabular-nums; }
+.tile.hero .value { font-size: 34px; }
+.tile .cmp { font-size: 12px; color: var(--ink-2); display: flex; justify-content: space-between; gap: 6px; }
+.up { color: var(--up-ink); } .down { color: var(--down-ink); } .flat, .na { color: var(--ink-3); }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; font-size: 13px; }
+th { color: var(--ink-2); font-weight: 600; } th:first-child, td:first-child { text-align: left; }
+td.l { text-align: left; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; color: var(--ink); }
+.chip.good { background: var(--chip-good); } .chip.warning { background: var(--chip-warning); }
+.chip.critical { background: var(--chip-critical); } .chip.muted { background: var(--chip-muted); color: var(--ink-2); }
+.funnel .row { display: grid; grid-template-columns: 84px 1fr 120px; gap: 10px; align-items: center; margin: 8px 0; }
+.funnel .bar { height: 22px; display: flex; gap: 2px; }
+.funnel .seg { height: 100%; border-radius: 0 4px 4px 0; background: var(--series-1); min-width: 2px; }
+.funnel .seg.direct { background: var(--series-2); }
+.funnel .seg.first { border-radius: 0; }
+.funnel .n { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin-top: 6px; flex-wrap: wrap; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.factor { display: grid; grid-template-columns: 90px 1fr 70px; gap: 8px; align-items: center; margin: 8px 0; font-size: 13px; }
+.factor .track { position: relative; height: 14px; background: var(--grid); border-radius: 2px; }
+.factor .fill { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+.factor .fill.pos { background: var(--series-1); } .factor .fill.neg { background: var(--series-2); }
+.factor .mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--ink-3); }
+.note { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+.foot { font-size: 12px; color: var(--ink-3); margin: 20px 0 8px; line-height: 1.7; }
+svg text { fill: var(--ink-3); font-size: 11px; }
+.tip { position: fixed; pointer-events: none; background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.15); display: none; }
+.detail { font-size: 12px; color: var(--ink-2); text-align: left; }
+.blocked { text-align: center; padding: 48px 16px; }
+.blocked .big { font-size: 28px; font-weight: 700; margin: 8px 0; }
+/* report tabs (Power BI-style pages) */
+.tabs { background: var(--card); border-bottom: 1px solid var(--line); padding: 0 24px; display: flex; gap: 4px; overflow-x: auto; }
+.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 14px; font: inherit; font-size: 14px; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--series-1); }
+.js .tabpage { display: none; } .js .tabpage.active { display: block; }
+.top .status { margin-left: auto; text-decoration: none; opacity: 1; }
+.top .status .chip { font-size: 12px; }
+.top .archive { margin-left: 12px; }
+/* stat tiles */
+.tile { display: flex; flex-direction: column; gap: 2px; }
+.tile .row1 { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
+.tile .head { font-size: 15px; font-weight: 600; margin-top: 2px; }
+.tile .head small { font-size: 12px; font-weight: 400; color: var(--ink-2); margin-left: 4px; }
+.tile .ref { font-size: 12px; color: var(--ink-2); }
+.tile .ref b { font-weight: 600; }
+.tile .spark { display: block; width: 100%; height: 30px; margin-top: 8px; }
+.tile .spark path { fill: none; stroke: var(--series-1); stroke-width: 2; }
+@media (max-width: 900px) { .tiles { grid-template-columns: 1fr 1fr; } .tile.hero { grid-column: 1 / -1; } .two { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { main { padding: 12px 16px; } .funnel .row { grid-template-columns: 70px 1fr 90px; } }
+</style>
+<script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+<div class="top">
+  <h1>Merch Shop 운영 대시보드</h1>
+  <span class="date">2020-12-26 (토)</span>
+  <a class="status" href="#quality" data-tab="quality" title="데이터 품질 보기">
+    <span class="chip good">✓ 데이터 정상</span>
+  </a>
+  <a class="archive" href="../index.html">날짜 목록</a>
+</div>
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="overview">개요</button>
+  <button role="tab" data-tab="detail">퍼널 · 구분</button>
+  <button role="tab" data-tab="quality">데이터 품질</button>
+</nav>
+<main>
+
+
+<section class="tabpage" id="overview" role="tabpanel">
+
+  
+
+  <div class="section-title">어제 매출은 평소 범위 안인가 <span>· 화살표 = 최근 7일 평균 대비</span></div>
+  <div class="grid tiles">
+    
+    <div class="card tile hero">
+      <div class="label">매출</div>
+      <div class="value">$725</div>
+      
+        <div class="head down">▼ 69.7%<small>7일 평균 대비</small></div>
+        <div class="ref">7일 평균 <b>$2,393</b></div>
+      
+      <div class="ref">
+        지난주 토 <b>$2,767</b> <span class="down">▼ 73.8%</span>
+        
+      </div>
+      
+      <svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"
+           role="img" aria-label="최근 14일 매출 추이">
+        <path d="M3.0,21.0 L11.8,10.5 L20.5,7.3 L29.3,3.0 L38.1,15.2 L46.8,15.2 L55.6,25.2 L64.4,28.8 L73.2,23.6 L81.9,24.4 L90.7,20.9 L99.5,29.4 L108.2,31.0 L117.0,30.5" vector-effect="non-scaling-stroke"/>
+      </svg>
+      
+    </div>
+    
+    <div class="card tile">
+      <div class="label">주문</div>
+      <div class="value">15</div>
+      
+        <div class="head down">▼ 62.4%<small>7일 평균 대비</small></div>
+        <div class="ref">7일 평균 <b>40</b></div>
+      
+      <div class="ref">
+        지난주 토 <b>50</b> <span class="down">▼ 70.0%</span>
+        
+      </div>
+      
+      <svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"
+           role="img" aria-label="최근 14일 주문 추이">
+        <path d="M3.0,19.2 L11.8,13.9 L20.5,5.0 L29.3,3.0 L38.1,7.0 L46.8,11.0 L55.6,23.2 L64.4,30.1 L73.2,23.2 L81.9,21.9 L90.7,19.4 L99.5,29.7 L108.2,30.8 L117.0,31.0" vector-effect="non-scaling-stroke"/>
+      </svg>
+      
+    </div>
+    
+    <div class="card tile">
+      <div class="label">세션</div>
+      <div class="value">2,677</div>
+      
+        <div class="head down">▼ 20.8%<small>7일 평균 대비</small></div>
+        <div class="ref">7일 평균 <b>3,379</b></div>
+      
+      <div class="ref">
+        지난주 토 <b>3,595</b> <span class="down">▼ 25.5%</span>
+        
+      </div>
+      
+      <svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"
+           role="img" aria-label="최근 14일 세션 추이">
+        <path d="M3.0,21.4 L11.8,8.9 L20.5,3.0 L29.3,5.0 L38.1,6.6 L46.8,11.2 L55.6,22.5 L64.4,25.2 L73.2,18.7 L81.9,20.2 L90.7,23.8 L99.5,29.6 L108.2,31.0 L117.0,30.7" vector-effect="non-scaling-stroke"/>
+      </svg>
+      
+    </div>
+    
+    <div class="card tile">
+      <div class="label">주문 전환율</div>
+      <div class="value">0.56%</div>
+      
+        <div class="head down">▼ 0.62%p<small>7일 평균 대비</small></div>
+        <div class="ref">7일 평균 <b>1.18%</b></div>
+      
+      <div class="ref">
+        지난주 토 <b>1.39%</b> <span class="down">▼ 0.83%p</span>
+        
+      </div>
+      
+      <svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"
+           role="img" aria-label="최근 14일 주문 전환율 추이">
+        <path d="M3.0,13.0 L11.8,13.5 L20.5,6.6 L29.3,3.0 L38.1,6.5 L46.8,8.3 L55.6,19.3 L64.4,30.8 L73.2,21.3 L81.9,18.4 L90.7,11.5 L99.5,28.3 L108.2,30.4 L117.0,31.0" vector-effect="non-scaling-stroke"/>
+      </svg>
+      
+    </div>
+    
+    <div class="card tile">
+      <div class="label">객단가</div>
+      <div class="value">$48</div>
+      
+        <div class="head down">▼ 19.5%<small>7일 평균 대비</small></div>
+        <div class="ref">7일 평균 <b>$60</b></div>
+      
+      <div class="ref">
+        지난주 토 <b>$55</b> <span class="down">▼ 12.7%</span>
+        
+      </div>
+      
+      <svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"
+           role="img" aria-label="최근 14일 객단가 추이">
+        <path d="M3.0,16.2 L11.8,3.0 L20.5,12.1 L29.3,8.6 L38.1,21.6 L46.8,17.1 L55.6,20.7 L64.4,11.7 L73.2,14.7 L81.9,21.0 L90.7,15.5 L99.5,20.8 L108.2,31.0 L117.0,24.2" vector-effect="non-scaling-stroke"/>
+      </svg>
+      
+    </div>
+    
+  </div>
+  <div class="note">카드 아래 선은 최근 14일 추이이고, 오른쪽 끝이 오늘입니다.</div>
+
+  <div class="section-title">어디서 변했나 <span>· 매출 = 세션 × 주문 전환율 × 객단가</span></div>
+  <div class="grid two">
+    <div class="card">
+      <h3>매출 분해 (7일 평균 대비)</h3>
+      
+        
+        
+        
+        <div class="factor">
+          <span>세션</span>
+          <div class="track" title="-20.8%">
+            <div class="mid"></div>
+            <div class="fill neg"
+                 style="right:50%;width:19.8%"></div>
+          </div>
+          <b class="down" style="text-align:right">-20.8%</b>
+        </div>
+        
+        
+        <div class="factor">
+          <span>주문 전환율</span>
+          <div class="track" title="-52.5%">
+            <div class="mid"></div>
+            <div class="fill neg"
+                 style="right:50%;width:50.0%"></div>
+          </div>
+          <b class="down" style="text-align:right">-52.5%</b>
+        </div>
+        
+        
+        <div class="factor">
+          <span>객단가</span>
+          <div class="track" title="-19.5%">
+            <div class="mid"></div>
+            <div class="fill neg"
+                 style="right:50%;width:18.6%"></div>
+          </div>
+          <b class="down" style="text-align:right">-19.5%</b>
+        </div>
+        
+        <div class="legend"><span><i class="sw" style="background:var(--series-1)"></i>평균보다 높음</span><span><i class="sw" style="background:var(--series-2)"></i>낮음</span></div>
+        <div class="note">7일 평균 대비 가장 크게 움직인 항: 주문 전환율 (-52.5%)</div>
+      
+      <div class="note"><a href="#detail" data-tab="detail">기기·신규/재방문별로 보기 →</a></div>
+    </div>
+
+    <div class="card">
+      <h3>일별 매출 (최근 4주)</h3>
+      
+      
+      <svg viewBox="0 0 640 220" width="100%" role="img" aria-label="최근 4주 일별 매출과 7일 평균">
+        
+          <line x1="56" x2="624" y1="192.0" y2="192.0" stroke="var(--grid)" stroke-width="1"/>
+          <text x="50" y="196.0" text-anchor="end">$0k</text>
+        
+          <line x1="56" x2="624" y1="133.33333333333334" y2="133.33333333333334" stroke="var(--grid)" stroke-width="1"/>
+          <text x="50" y="137.33333333333334" text-anchor="end">$5k</text>
+        
+          <line x1="56" x2="624" y1="74.66666666666667" y2="74.66666666666667" stroke="var(--grid)" stroke-width="1"/>
+          <text x="50" y="78.66666666666667" text-anchor="end">$10k</text>
+        
+          <line x1="56" x2="624" y1="16.0" y2="16.0" stroke="var(--grid)" stroke-width="1"/>
+          <text x="50" y="20.0" text-anchor="end">$15k</text>
+        
+        <text x="165.23076923076923" y="212" text-anchor="middle">12/5</text><text x="318.1538461538462" y="212" text-anchor="middle">12/12</text><text x="471.07692307692304" y="212" text-anchor="middle">12/19</text><text x="624.0" y="212" text-anchor="middle">12/26</text>
+        <path d="M165.2,112.3 L187.1,113.2 L208.9,120.5 L230.8,126.5 L252.6,122.3 L274.5,113.4 L296.3,102.6 L318.2,95.9 L340.0,96.0 L361.8,92.5 L383.7,92.5 L405.5,91.0 L427.4,89.6 L449.2,96.5 L471.1,102.9 L492.9,108.8 L514.8,113.8 L536.6,122.2 L558.5,133.2 L580.3,144.7 L602.2,153.8 L624.0,163.9" fill="none" stroke="var(--ref)" stroke-width="2" stroke-dasharray="4 3"/>
+        <path d="M56.0,51.7 L77.8,119.2 L99.7,131.6 L121.5,141.8 L143.4,116.9 L165.2,117.8 L187.1,164.7 L208.9,93.3 L230.8,90.1 L252.6,69.0 L274.5,66.5 L296.3,70.0 L318.2,118.3 L340.0,140.4 L361.8,93.4 L383.7,79.2 L405.5,59.7 L427.4,114.6 L449.2,114.7 L471.1,159.5 L492.9,175.6 L514.8,152.3 L536.6,156.0 L558.5,140.2 L580.3,178.4 L602.2,185.5 L624.0,183.5" fill="none" stroke="var(--series-1)" stroke-width="2"/>
+        <circle cx="624.0" cy="183.49333333333334" r="4" fill="var(--series-1)" stroke="var(--card)" stroke-width="2"/>
+        <line id="xh" y1="16" y2="192" stroke="var(--ink-3)" stroke-width="1" visibility="hidden"/>
+        
+          <rect class="hit" x="46.0" y="0" width="20" height="192" fill="transparent"
+                data-x="56.0" data-tip="11/30 · 매출 $11,956 · 7일 평균 –"/>
+        
+          <rect class="hit" x="67.84615384615384" y="0" width="20" height="192" fill="transparent"
+                data-x="77.84615384615384" data-tip="12/1 · 매출 $6,203 · 7일 평균 –"/>
+        
+          <rect class="hit" x="89.6923076923077" y="0" width="20" height="192" fill="transparent"
+                data-x="99.6923076923077" data-tip="12/2 · 매출 $5,144 · 7일 평균 –"/>
+        
+          <rect class="hit" x="111.53846153846155" y="0" width="20" height="192" fill="transparent"
+                data-x="121.53846153846155" data-tip="12/3 · 매출 $4,277 · 7일 평균 –"/>
+        
+          <rect class="hit" x="133.3846153846154" y="0" width="20" height="192" fill="transparent"
+                data-x="143.3846153846154" data-tip="12/4 · 매출 $6,398 · 7일 평균 –"/>
+        
+          <rect class="hit" x="155.23076923076923" y="0" width="20" height="192" fill="transparent"
+                data-x="165.23076923076923" data-tip="12/5 · 매출 $6,325 · 7일 평균 $6,796"/>
+        
+          <rect class="hit" x="177.0769230769231" y="0" width="20" height="192" fill="transparent"
+                data-x="187.0769230769231" data-tip="12/6 · 매출 $2,328 · 7일 평균 $6,717"/>
+        
+          <rect class="hit" x="198.9230769230769" y="0" width="20" height="192" fill="transparent"
+                data-x="208.9230769230769" data-tip="12/7 · 매출 $8,415 · 7일 평균 $6,090"/>
+        
+          <rect class="hit" x="220.76923076923077" y="0" width="20" height="192" fill="transparent"
+                data-x="230.76923076923077" data-tip="12/8 · 매출 $8,687 · 7일 평균 $5,584"/>
+        
+          <rect class="hit" x="242.6153846153846" y="0" width="20" height="192" fill="transparent"
+                data-x="252.6153846153846" data-tip="12/9 · 매출 $10,487 · 7일 평균 $5,939"/>
+        
+          <rect class="hit" x="264.46153846153845" y="0" width="20" height="192" fill="transparent"
+                data-x="274.46153846153845" data-tip="12/10 · 매출 $10,698 · 7일 평균 $6,702"/>
+        
+          <rect class="hit" x="286.30769230769226" y="0" width="20" height="192" fill="transparent"
+                data-x="296.30769230769226" data-tip="12/11 · 매출 $10,400 · 7일 평균 $7,620"/>
+        
+          <rect class="hit" x="308.1538461538462" y="0" width="20" height="192" fill="transparent"
+                data-x="318.1538461538462" data-tip="12/12 · 매출 $6,284 · 7일 평균 $8,191"/>
+        
+          <rect class="hit" x="330.0" y="0" width="20" height="192" fill="transparent"
+                data-x="340.0" data-tip="12/13 · 매출 $4,395 · 7일 평균 $8,186"/>
+        
+          <rect class="hit" x="351.8461538461538" y="0" width="20" height="192" fill="transparent"
+                data-x="361.8461538461538" data-tip="12/14 · 매출 $8,407 · 7일 평균 $8,481"/>
+        
+          <rect class="hit" x="373.6923076923077" y="0" width="20" height="192" fill="transparent"
+                data-x="383.6923076923077" data-tip="12/15 · 매출 $9,610 · 7일 평균 $8,480"/>
+        
+          <rect class="hit" x="395.53846153846155" y="0" width="20" height="192" fill="transparent"
+                data-x="405.53846153846155" data-tip="12/16 · 매출 $11,272 · 7일 평균 $8,612"/>
+        
+          <rect class="hit" x="417.3846153846154" y="0" width="20" height="192" fill="transparent"
+                data-x="427.3846153846154" data-tip="12/17 · 매출 $6,595 · 7일 평균 $8,724"/>
+        
+          <rect class="hit" x="439.2307692307692" y="0" width="20" height="192" fill="transparent"
+                data-x="449.2307692307692" data-tip="12/18 · 매출 $6,591 · 7일 평균 $8,138"/>
+        
+          <rect class="hit" x="461.07692307692304" y="0" width="20" height="192" fill="transparent"
+                data-x="471.07692307692304" data-tip="12/19 · 매출 $2,767 · 7일 평균 $7,593"/>
+        
+          <rect class="hit" x="482.92307692307696" y="0" width="20" height="192" fill="transparent"
+                data-x="492.92307692307696" data-tip="12/20 · 매출 $1,399 · 7일 평균 $7,091"/>
+        
+          <rect class="hit" x="504.7692307692307" y="0" width="20" height="192" fill="transparent"
+                data-x="514.7692307692307" data-tip="12/21 · 매출 $3,383 · 7일 평균 $6,663"/>
+        
+          <rect class="hit" x="526.6153846153845" y="0" width="20" height="192" fill="transparent"
+                data-x="536.6153846153845" data-tip="12/22 · 매출 $3,071 · 7일 평균 $5,945"/>
+        
+          <rect class="hit" x="548.4615384615385" y="0" width="20" height="192" fill="transparent"
+                data-x="558.4615384615385" data-tip="12/23 · 매출 $4,418 · 7일 평균 $5,011"/>
+        
+          <rect class="hit" x="570.3076923076924" y="0" width="20" height="192" fill="transparent"
+                data-x="580.3076923076924" data-tip="12/24 · 매출 $1,160 · 7일 평균 $4,032"/>
+        
+          <rect class="hit" x="592.1538461538462" y="0" width="20" height="192" fill="transparent"
+                data-x="602.1538461538462" data-tip="12/25 · 매출 $552 · 7일 평균 $3,256"/>
+        
+          <rect class="hit" x="614.0" y="0" width="20" height="192" fill="transparent"
+                data-x="624.0" data-tip="12/26 · 매출 $725 · 7일 평균 $2,393"/>
+        
+      </svg>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--series-1)"></i>일별 매출</span>
+        <span><i class="sw" style="background:var(--ref)"></i>직전 7일 평균 (점선)</span>
+      </div>
+      
+    </div>
+  </div>
+
+</section>
+
+
+
+<section class="tabpage" id="detail" role="tabpanel">
+  <div class="section-title">구분별 <span>· 7일 평균 대비</span></div>
+  <div class="card">
+    <table>
+      <tr><th>구분</th><th>세션</th><th>주문</th><th>전환율</th><th>전환율 vs 7일</th><th>매출</th><th>매출 vs 7일</th><th>세션 vs 7일</th></tr>
+      
+      <tr>
+        <td>데스크톱</td><td>1,555</td><td>4</td>
+        <td>0.26%</td>
+        <td>-0.85%p</td>
+        <td>$266</td>
+        <td class="down">-82.1%</td>
+        <td>-19.9%</td>
+      </tr>
+      
+      <tr>
+        <td>모바일</td><td>1,122</td><td>11</td>
+        <td>0.98%</td>
+        <td>-0.30%p</td>
+        <td>$459</td>
+        <td class="down">-49.2%</td>
+        <td>-22.0%</td>
+      </tr>
+      
+      <tr>
+        <td>신규</td><td>2,233</td><td>8</td>
+        <td>0.36%</td>
+        <td>-0.19%p</td>
+        <td>$468</td>
+        <td class="down">-32.0%</td>
+        <td>-14.1%</td>
+      </tr>
+      
+      <tr>
+        <td>재방문</td><td>444</td><td>7</td>
+        <td>1.58%</td>
+        <td>-1.72%p</td>
+        <td>$257</td>
+        <td class="down">-84.9%</td>
+        <td>-43.0%</td>
+      </tr>
+      
+    </table>
+    <div class="note">신규 = 이 브라우저의 첫 세션, 재방문 = 30분 이상 쉬었다가 같은 브라우저로 다시 온 세션 (재구매와 다름).
+      신규가 몰리면 사이트에 문제가 없어도 전체 전환율이 내려갑니다 — 신규·재방문 각각의 전환율을 같이 보세요.</div>
+  </div>
+
+  <div class="grid two" style="margin-top:12px">
+    <div class="card funnel">
+      <h3>퍼널 <span class="note">(세션이 각 단계에 도달했는지 · 괄호는 앞 단계 대비)</span></h3>
+      
+      
+      <div class="row">
+        <span>세션</span>
+        <div class="bar">
+          
+            <div class="seg" style="width:100.00%"></div>
+          
+        </div>
+        <span class="n">2,677</span>
+      </div>
+      
+      <div class="row">
+        <span>상품 조회</span>
+        <div class="bar">
+          
+            <div class="seg" style="width:15.28%"></div>
+          
+        </div>
+        <span class="n">409 (15.3%)</span>
+      </div>
+      
+      <div class="row">
+        <span>결제 시작</span>
+        <div class="bar">
+          
+            <div class="seg first" style="width:0.56%" title="장바구니 담고 결제 15"></div>
+            <div class="seg direct" style="width:0.37%" title="바로 결제 10"></div>
+          
+        </div>
+        <span class="n">25 (6.1%)</span>
+      </div>
+      
+      <div class="row">
+        <span>구매 세션</span>
+        <div class="bar">
+          
+            <div class="seg" style="width:0.56%"></div>
+          
+        </div>
+        <span class="n">15 (60.0%)</span>
+      </div>
+      
+      <div class="legend">
+        <span><i class="sw" style="background:var(--series-1)"></i>장바구니 담고 결제</span>
+        <span><i class="sw" style="background:var(--series-2)"></i>바로 결제 40.0%</span>
+        <span>장바구니 담기율 18.3%</span>
+      </div>
+      <div class="note">구매 세션 15 &lt; 주문 15: 한 세션에서 여러 건을 주문할 수 있습니다.</div>
+    </div>
+
+    <div class="card">
+      <h3>주간 (월~일, 끝난 주)</h3>
+      
+      <table>
+        <tr><th>주</th><th>세션</th><th>주문</th><th>매출</th><th>전환율</th><th>객단가</th></tr>
+        
+        <tr><td>11/30~12/6</td>
+            <td>31,098</td><td>610</td><td>$42,631</td>
+            <td>1.96%</td><td>$70</td></tr>
+        
+        <tr><td>12/7~12/13</td>
+            <td>38,739</td><td>825</td><td>$59,366</td>
+            <td>2.13%</td><td>$72</td></tr>
+        
+        <tr><td>12/14~12/20</td>
+            <td>33,419</td><td>662</td><td>$46,641</td>
+            <td>1.98%</td><td>$70</td></tr>
+        
+      </table>
+      <div class="note">주간 세션은 그 주의 서로 다른 세션 수 (일별 합계보다 약간 적음).</div>
+    </div>
+  </div>
+</section>
+
+
+
+<section class="tabpage" id="quality" role="tabpanel">
+  <div class="banner good">
+    <span class="chip good">✓ 정상</span>
+    <div>
+    품질 체크를 모두 통과했습니다.
+    </div>
+  </div>
+  <div class="card">
+    <table>
+      <tr><th>체크</th><th>값</th><th>분자 / 분모</th><th>판정</th><th class="detail">진단</th></tr>
+      
+      <tr>
+        <td>DQ1 데이터 도착 / 이벤트 총량</td>
+        <td>64.0%</td>
+        <td>22,121 / 34,584</td>
+        <td><span class="chip good">✓ 정상</span></td>
+        <td class="detail"></td>
+      </tr>
+      
+      <tr>
+        <td>DQ2 거래번호 없는 구매 세션 비율</td>
+        <td>6.2%</td>
+        <td>1 / 16</td>
+        <td><span class="chip good">✓ 정상</span></td>
+        <td class="detail">users=1 sessions=1 events=1 | desktop=1 mobile=0 | browsers: Chrome</td>
+      </tr>
+      
+      <tr>
+        <td>DQ3 이벤트별 수집량 · 장바구니</td>
+        <td>46.6%</td>
+        <td>75 / 161</td>
+        <td><span class="chip good">✓ 정상</span></td>
+        <td class="detail"></td>
+      </tr>
+      
+      <tr>
+        <td>DQ3 이벤트별 수집량 · 결제 시작</td>
+        <td>35.2%</td>
+        <td>25 / 71</td>
+        <td><span class="chip good">✓ 정상</span></td>
+        <td class="detail"></td>
+      </tr>
+      
+      <tr>
+        <td>DQ3 이벤트별 수집량 · 구매</td>
+        <td>43.8%</td>
+        <td>16 / 37</td>
+        <td><span class="chip good">✓ 정상</span></td>
+        <td class="detail"></td>
+      </tr>
+      
+      <tr>
+        <td>DQ3 이벤트별 수집량 · 상품 조회</td>
+        <td>62.4%</td>
+        <td>409 / 656</td>
+        <td><span class="chip good">✓ 정상</span></td>
+        <td class="detail"></td>
+      </tr>
+      
+      <tr>
+        <td>DQ4 주문 매출 대사</td>
+        <td>0.4%</td>
+        <td>725 / 728</td>
+        <td><span class="chip good">✓ 정상</span></td>
+        <td class="detail"></td>
+      </tr>
+      
+      <tr>
+        <td>DQ5 다중 주문 세션 비율</td>
+        <td>0.0%</td>
+        <td>0 / 15</td>
+        <td><span class="chip good">✓ 정상</span></td>
+        <td class="detail"></td>
+      </tr>
+      
+    </table>
+    <div class="note">판정은 전체 기준이고, 진단 정보(사용자·세션 집중도, 기기, 브라우저)는 원인 위치를 좁히는 참고용입니다.
+      DQ1·DQ3은 직전 7일 기준선 대비 비율. DQ6(집계 대사)은 게시 전 dbt 테스트로 확인되며, 실패하면 검수 실패 페이지가 게시됩니다.</div>
+  </div>
+  <div class="foot">
+    · 주문·매출은 거래번호 기준이며, 주문 정보가 빠진 구매(평소 구매 세션의 약 4~5%) 때문에 실제보다 약 4~5% 과소 집계됩니다.<br>
+    · 매출은 세금·배송비 제외, 환불 미반영(총매출, USD). 비교 기준에서 수집 결함 구간과 차단일은 제외하며, 비교할 날이 없으면 "비교 불가"로 표시합니다.<br>
+    · 데이터: GA4 난독화 공개 샘플(Google Merchandise Store), 운영 기간 2020-11-30 ~ 2021-01-24.
+  </div>
+</section>
+
+</main>
+<div class="tip" id="tip"></div>
+<script>
+(function () {
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs button'));
+  function show(id) {
+    if (!document.getElementById(id)) id = 'overview';
+    document.querySelectorAll('.tabpage').forEach(function (p) { p.classList.toggle('active', p.id === id); });
+    tabs.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === id ? 'true' : 'false'); });
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('[data-tab]').forEach(function (el) {
+    el.addEventListener('click', function (e) { e.preventDefault(); history.replaceState(null, '', '#' + el.dataset.tab); show(el.dataset.tab); });
+  });
+  show((location.hash || '#overview').slice(1));
+
+  var tip = document.getElementById('tip'), xh = document.getElementById('xh');
+  if (!xh) return;
+  document.querySelectorAll('rect.hit').forEach(function (r) {
+    r.addEventListener('mousemove', function (e) {
+      xh.setAttribute('x1', r.dataset.x); xh.setAttribute('x2', r.dataset.x); xh.setAttribute('visibility', 'visible');
+      tip.textContent = r.dataset.tip; tip.style.display = 'block';
+      tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY - 30) + 'px';
+    });
+    r.addEventListener('mouseleave', function () { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); });
+  });
+})();
+</script>
+</body>
+</html>
