@@ -18,11 +18,10 @@ import os
 from datetime import date, timedelta
 
 import pendulum
-from airflow.exceptions import AirflowFailException
 from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.google.cloud.sensors.bigquery import BigQueryTableExistenceSensor
-from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import Param, dag, task
+from airflow.sdk.exceptions import AirflowFailException
 
 KST = pendulum.timezone("Asia/Seoul")
 OP_START, OP_END = date(2020, 11, 30), date(2021, 1, 24)   # operating period (docs/01_design.md 2.2)
@@ -116,13 +115,43 @@ def ga4_ops_daily():
         bash_command=f"{PY} -m dashboard.render {render_args} --blocked-reason '파이프라인 또는 품질 게이트 실패 (Airflow 실행 로그 확인)'",
     )
 
-    publish = EmptyOperator(task_id="publish", trigger_rule="one_success")   # step 7: push site/ to GitHub Pages
+    # Push site/ to the gh-pages branch (GitHub Pages). The gh-pages history is the record of what was
+    # published each day. Test runs never publish. The token goes in a request header, never in a URL or log.
+    publish = BashOperator(
+        task_id="publish",
+        trigger_rule="one_success",
+        retries=0,
+        bash_command=r"""
+set -euo pipefail
+if [ "{{ ti.xcom_pull(task_ids='resolve_date')['target'] }}" != "prod" ]; then echo "test run - not published"; exit 0; fi
+if [ -z "${GITHUB_TOKEN:-}" ]; then echo "GITHUB_TOKEN is not set in airflow/.env - cannot publish" >&2; exit 1; fi
+cd /opt/project/.pages
+G="git -c safe.directory=/opt/project/.pages"
+rsync -a --delete --exclude .git --exclude .nojekyll /opt/project/site/ ./
+$G add -A
+if $G diff --cached --quiet; then
+  echo "no new pages"
+else
+  GIT_AUTHOR_NAME=ga4-ops-airflow GIT_COMMITTER_NAME=ga4-ops-airflow \
+  GIT_AUTHOR_EMAIL="$GIT_PUBLISH_EMAIL" GIT_COMMITTER_EMAIL="$GIT_PUBLISH_EMAIL" \
+    $G commit -q -m "publish: data {{ ti.xcom_pull(task_ids='resolve_date')['data_date'] }} (run {{ run_id }})"
+fi
+# Always push: also delivers commits left behind by an earlier run whose push failed (no-op if up to date).
+AUTH=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\n')
+$G -c http.extraHeader="Authorization: Basic $AUTH" push -q origin gh-pages
+echo "published"
+""",
+    )
 
     @task(trigger_rule="all_done", retries=0)
     def gate_result(**context):
-        """Keep the run red when the day was blocked, even though the blocked page was published."""
-        if context["ti"].xcom_pull(task_ids="render_blocked"):
+        """The run's final verdict (it is the only leaf, so it decides the run's color).
+        Red when the day was blocked - even though the blocked page was published - or when publishing failed."""
+        ti = context["ti"]
+        if ti.xcom_pull(task_ids="render_blocked"):
             raise AirflowFailException("Quality gate blocked this day - blocked page published instead of KPIs.")
+        if ti.xcom_pull(task_ids="publish") is None:   # publish echoes a status line only when it finishes
+            raise AirflowFailException("Publishing to GitHub Pages failed - see the publish task log.")
 
     resolved >> check_raw >> dbt_run >> dbt_test >> render_ok
     [check_raw, dbt_run, dbt_test] >> render_blocked

@@ -1,6 +1,8 @@
 # Local Airflow for the GA4 ops dashboard: Postgres metadata DB + LocalExecutor.
 #   cd airflow && docker compose up -d --build      UI: http://localhost:8080
-# Settings come from airflow/.env (not committed): GCP_KEYFILE_HOST, GA4_GO_LIVE_DATE.
+# Settings come from airflow/.env (not committed): GCP_KEYFILE_HOST, GA4_GO_LIVE_DATE,
+# GITHUB_TOKEN (fine-grained, this repo only, Contents: read & write), GIT_PUBLISH_EMAIL.
+# One-time setup of the publish target: git clone --branch gh-pages <repo> .pages (at the repo root).
 
 x-airflow: &airflow
   build: .
@@ -26,6 +28,7 @@ x-airflow: &airflow
     - ../dbt:/opt/project/dbt
     - ../dashboard:/opt/project/dashboard
     - ../site:/opt/project/site
+    - ../.pages:/opt/project/.pages          # clone of the gh-pages branch (publish target)
     - ${GCP_KEYFILE_HOST}:/opt/secrets/gcp.json:ro
   depends_on:
     postgres:
