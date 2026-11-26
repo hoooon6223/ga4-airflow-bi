@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merch Shop 운영 · {{ v.date }}</title>
+{% include "_style.html" %}
+<script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+<div class="top">
+  <h1>Merch Shop 운영 대시보드</h1>
+  <span class="date">{{ v.date }} ({{ v.weekday }})</span>
+  <a class="status" href="#quality" data-tab="quality" title="데이터 품질 보기">
+    <span class="chip {{ v.overall_tone }}">{{ v.overall_icon }} 데이터 {{ v.overall_label }}</span>
+  </a>
+  <a class="archive" href="../index.html">날짜 목록</a>
+</div>
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="overview">개요</button>
+  {% if v.overall != 'block' %}<button role="tab" data-tab="detail">퍼널 · 구분</button>{% endif %}
+  <button role="tab" data-tab="quality">데이터 품질</button>
+</nav>
+<main>
+
+{# ───────────── 1. 개요 ───────────── #}
+<section class="tabpage" id="overview" role="tabpanel">
+{% if v.overall == 'block' %}
+  <div class="card blocked">
+    <div class="chip critical">✕ 차단</div>
+    <div class="big">{{ v.date }} 데이터 검수 실패</div>
+    <p>수치를 확인 중입니다. 원인이 확인될 때까지 이 날의 매출·주문·전환 수치를 의사결정에 쓰지 마세요.</p>
+    {% if v.blocked_reason %}<p class="note">사유: {{ v.blocked_reason }}</p>{% endif %}
+    {% for b in v.blocks %}
+    <p><b>{{ b.id }} {{ b.name }}</b>: {{ b.value_fmt }} ({{ b.num|num }} / {{ b.den|num }})</p>
+    {% endfor %}
+    <p class="note"><a href="#quality" data-tab="quality">데이터 품질 탭에서 자세히 보기 →</a></p>
+  </div>
+{% else %}
+  {% if v.overall == 'warn' %}
+  <div class="banner warning">
+    <span class="chip warning">! 경고</span>
+    <div><b>숫자는 게시했지만 해석에 주의가 필요합니다:</b>
+      {% for w in v.warns %}{{ w.name }} {{ w.value_fmt }}{% if not loop.last %}, {% endif %}{% endfor %}
+      · <a href="#quality" data-tab="quality">자세히</a></div>
+  </div>
+  {% endif %}
+
+  <div class="section-title">어제 매출은 평소 범위 안인가 <span>· 화살표 = 최근 7일 평균 대비</span></div>
+  <div class="grid tiles">
+    {% for t in v.tiles %}
+    <div class="card tile{% if t.hero %} hero{% endif %}">
+      <div class="label">{{ t.label }}</div>
+      <div class="value">{{ t.value }}</div>
+      {% if t.avg7 %}
+        <div class="head {{ t.avg7_dir }}">{{ t.avg7_arrow }} {{ t.avg7 }}<small>7일 평균 대비</small></div>
+        <div class="ref">7일 평균 <b>{{ t.avg7_ref }}</b></div>
+      {% else %}
+        <div class="head na">비교 불가<small>7일 평균 기준 부족</small></div>
+      {% endif %}
+      <div class="ref">
+        {% if t.wow %}지난주 {{ t.weekday }} <b>{{ t.wow_ref }}</b> <span class="{{ t.wow_dir }}">{{ t.wow_arrow }} {{ t.wow }}</span>
+        {% else %}지난주 {{ t.weekday }} 비교 불가{% endif %}
+      </div>
+      {% if t.spark %}
+      <svg class="spark" viewBox="0 0 {{ t.spark.w }} {{ t.spark.h }}" preserveAspectRatio="none"
+           role="img" aria-label="최근 {{ t.spark.days }}일 {{ t.label }} 추이">
+        <path d="{{ t.spark.path }}" vector-effect="non-scaling-stroke"/>
+      </svg>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% if v.tiles[0].spark %}<div class="note">카드 아래 선은 최근 14일 추이이고, 오른쪽 끝이 오늘입니다.</div>{% endif %}
+
+  <div class="section-title">어디서 변했나 <span>· 매출 = 세션 × 주문 전환율 × 객단가</span></div>
+  <div class="grid two">
+    <div class="card">
+      <h3>매출 분해 (7일 평균 대비)</h3>
+      {% if v.factors %}
+        {% set scale = [v.factors | map(attribute='change') | map('abs') | max, 0.05] | max %}
+        {% for f in v.factors %}
+        {% set w = (f.change | abs) / scale * 50 %}
+        <div class="factor">
+          <span>{{ f.label }}</span>
+          <div class="track" title="{{ f.change | signed }}">
+            <div class="mid"></div>
+            <div class="fill {{ 'pos' if f.change >= 0 else 'neg' }}"
+                 style="{% if f.change >= 0 %}left:50%{% else %}right:50%{% endif %};width:{{ '%.1f' % w }}%"></div>
+          </div>
+          <b class="{{ 'up' if f.change > 0.005 else 'down' if f.change < -0.005 else 'flat' }}" style="text-align:right">{{ f.change | signed }}</b>
+        </div>
+        {% endfor %}
+        <div class="legend"><span><i class="sw" style="background:var(--series-1)"></i>평균보다 높음</span><span><i class="sw" style="background:var(--series-2)"></i>낮음</span></div>
+        <div class="note">{{ v.decomp_note }}</div>
+      {% else %}
+        <p class="note">7일 평균 비교 불가 (기준이 되는 유효한 날이 5일 미만)</p>
+      {% endif %}
+      <div class="note"><a href="#detail" data-tab="detail">기기·신규/재방문별로 보기 →</a></div>
+    </div>
+
+    <div class="card">
+      <h3>일별 매출 (최근 4주)</h3>
+      {% set t = v.trend %}
+      {% if t.dots | length < 2 %}
+      <p class="note">운영 시작일이라 아직 추이가 없습니다. 오늘 매출 {{ t.dots[0].rev if t.dots else '–' }}.</p>
+      {% else %}
+      <svg viewBox="0 0 {{ t.w }} {{ t.h }}" width="100%" role="img" aria-label="최근 4주 일별 매출과 7일 평균">
+        {% for g in t.grid %}
+          <line x1="{{ t.left }}" x2="{{ t.right }}" y1="{{ g.y }}" y2="{{ g.y }}" stroke="var(--grid)" stroke-width="1"/>
+          <text x="{{ t.left - 6 }}" y="{{ g.y + 4 }}" text-anchor="end">{{ g.label }}</text>
+        {% endfor %}
+        {% for k in t.ticks %}<text x="{{ k.x }}" y="{{ t.h - 8 }}" text-anchor="middle">{{ k.label }}</text>{% endfor %}
+        {% if t.avg_path %}<path d="{{ t.avg_path }}" fill="none" stroke="var(--ref)" stroke-width="2" stroke-dasharray="4 3"/>{% endif %}
+        <path d="{{ t.rev_path }}" fill="none" stroke="var(--series-1)" stroke-width="2"/>
+        <circle cx="{{ t.last.x }}" cy="{{ t.last.y }}" r="4" fill="var(--series-1)" stroke="var(--card)" stroke-width="2"/>
+        <line id="xh" y1="16" y2="{{ t.bottom }}" stroke="var(--ink-3)" stroke-width="1" visibility="hidden"/>
+        {% for d in t.dots %}
+          <rect class="hit" x="{{ d.x - 10 }}" y="0" width="20" height="{{ t.bottom }}" fill="transparent"
+                data-x="{{ d.x }}" data-tip="{{ d.date }} · 매출 {{ d.rev }} · 7일 평균 {{ d.avg }}"/>
+        {% endfor %}
+      </svg>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--series-1)"></i>일별 매출</span>
+        <span><i class="sw" style="background:var(--ref)"></i>직전 7일 평균 (점선)</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+</section>
+
+{# ───────────── 2. 퍼널 · 구분 ───────────── #}
+{% if v.overall != 'block' %}
+<section class="tabpage" id="detail" role="tabpanel">
+  <div class="section-title">구분별 <span>· 7일 평균 대비</span></div>
+  <div class="card">
+    <table>
+      <tr><th>구분</th><th>세션</th><th>주문</th><th>전환율</th><th>전환율 vs 7일</th><th>매출</th><th>매출 vs 7일</th><th>세션 vs 7일</th></tr>
+      {% for s in v.segments %}
+      <tr>
+        <td>{{ s.label }}</td><td>{{ s.sessions|num }}</td><td>{{ s.orders|num }}</td>
+        <td>{{ s.order_cr|pct(2) }}</td>
+        <td>{% if s.cr_avg7_pp is not none %}{{ '%+.2f' % (s.cr_avg7_pp|round(2) + 0.0) }}%p{% else %}–{% endif %}</td>
+        <td>{{ s.revenue|money }}</td>
+        <td class="{{ 'up' if (s.rev_avg7 or 0) > 0.005 else 'down' if (s.rev_avg7 or 0) < -0.005 else 'flat' }}">{{ s.rev_avg7|signed or '–' }}</td>
+        <td>{{ s.sessions_avg7|signed or '–' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <div class="note">신규 = 이 브라우저의 첫 세션, 재방문 = 30분 이상 쉬었다가 같은 브라우저로 다시 온 세션 (재구매와 다름).
+      신규가 몰리면 사이트에 문제가 없어도 전체 전환율이 내려갑니다 — 신규·재방문 각각의 전환율을 같이 보세요.</div>
+  </div>
+
+  <div class="grid two" style="margin-top:12px">
+    <div class="card funnel">
+      <h3>퍼널 <span class="note">(세션이 각 단계에 도달했는지 · 괄호는 앞 단계 대비)</span></h3>
+      {% set top = v.funnel.steps[0].n %}
+      {% for s in v.funnel.steps %}
+      <div class="row">
+        <span>{{ s.label }}</span>
+        <div class="bar">
+          {% if s.split %}
+            <div class="seg first" style="width:{{ '%.2f' % (s.split[0] / top * 100) }}%" title="장바구니 담고 결제 {{ s.split[0]|num }}"></div>
+            <div class="seg direct" style="width:{{ '%.2f' % (s.split[1] / top * 100) }}%" title="바로 결제 {{ s.split[1]|num }}"></div>
+          {% else %}
+            <div class="seg" style="width:{{ '%.2f' % (s.n / top * 100) }}%"></div>
+          {% endif %}
+        </div>
+        <span class="n">{{ s.n|num }}{% if s.rate is not none %} ({{ s.rate|pct }}){% endif %}</span>
+      </div>
+      {% endfor %}
+      <div class="legend">
+        <span><i class="sw" style="background:var(--series-1)"></i>장바구니 담고 결제</span>
+        <span><i class="sw" style="background:var(--series-2)"></i>바로 결제 {{ v.funnel.direct_share|pct }}</span>
+        <span>장바구니 담기율 {{ v.funnel.cart_rate|pct }}</span>
+      </div>
+      <div class="note">구매 세션 {{ v.funnel.steps[3].n|num }} &lt; 주문 {{ v.funnel.orders|num }}: 한 세션에서 여러 건을 주문할 수 있습니다.</div>
+    </div>
+
+    <div class="card">
+      <h3>주간 (월~일, 끝난 주)</h3>
+      {% if not v.weekly %}<p class="note">아직 끝난 주가 없습니다.</p>{% endif %}
+      <table>
+        <tr><th>주</th><th>세션</th><th>주문</th><th>매출</th><th>전환율</th><th>객단가</th></tr>
+        {% for w in v.weekly %}
+        <tr><td>{{ w.week_start.month }}/{{ w.week_start.day }}~{{ w.week_end.month }}/{{ w.week_end.day }}</td>
+            <td>{{ w.sessions|num }}</td><td>{{ w.orders|num }}</td><td>{{ w.revenue|money }}</td>
+            <td>{{ w.order_cr|pct(2) }}</td><td>{{ w.aov|money }}</td></tr>
+        {% endfor %}
+      </table>
+      <div class="note">주간 세션은 그 주의 서로 다른 세션 수 (일별 합계보다 약간 적음).</div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ───────────── 3. 데이터 품질 ───────────── #}
+<section class="tabpage" id="quality" role="tabpanel">
+  <div class="banner {{ v.overall_tone }}">
+    <span class="chip {{ v.overall_tone }}">{{ v.overall_icon }} {{ v.overall_label }}</span>
+    <div>
+    {% if v.overall == 'block' %}<b>검수 실패 — 이 날의 KPI는 게시하지 않았습니다.</b>
+    {% elif v.overall == 'warn' %}<b>경고가 있는 체크가 있습니다.</b> 숫자는 게시했지만 해석에 주의하세요.
+    {% else %}품질 체크를 모두 통과했습니다.{% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <table>
+      <tr><th>체크</th><th>값</th><th>분자 / 분모</th><th>판정</th><th class="detail">진단</th></tr>
+      {% for r in v.dq %}
+      <tr>
+        <td>{{ r.id }} {{ r.name }}</td>
+        <td>{{ r.value_fmt }}</td>
+        <td>{{ r.num|num }} / {{ r.den|num }}</td>
+        <td><span class="chip {{ r.tone }}">{{ r.icon }} {{ r.label }}</span></td>
+        <td class="detail">{{ r.detail or '' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <div class="note">판정은 전체 기준이고, 진단 정보(사용자·세션 집중도, 기기, 브라우저)는 원인 위치를 좁히는 참고용입니다.
+      DQ1·DQ3은 직전 7일 기준선 대비 비율. DQ6(집계 대사)은 게시 전 dbt 테스트로 확인되며, 실패하면 검수 실패 페이지가 게시됩니다.</div>
+  </div>
+  <div class="foot">
+    · 주문·매출은 거래번호 기준이며, 주문 정보가 빠진 구매(평소 구매 세션의 약 4~5%) 때문에 실제보다 약 4~5% 과소 집계됩니다.<br>
+    · 매출은 세금·배송비 제외, 환불 미반영(총매출, USD). 비교 기준에서 수집 결함 구간과 차단일은 제외하며, 비교할 날이 없으면 "비교 불가"로 표시합니다.<br>
+    · 데이터: GA4 난독화 공개 샘플(Google Merchandise Store), 운영 기간 2020-11-30 ~ 2021-01-24.
+  </div>
+</section>
+
+</main>
+<div class="tip" id="tip"></div>
+<script>
+(function () {
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs button'));
+  function show(id) {
+    if (!document.getElementById(id)) id = 'overview';
+    document.querySelectorAll('.tabpage').forEach(function (p) { p.classList.toggle('active', p.id === id); });
+    tabs.forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === id ? 'true' : 'false'); });
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('[data-tab]').forEach(function (el) {
+    el.addEventListener('click', function (e) { e.preventDefault(); history.replaceState(null, '', '#' + el.dataset.tab); show(el.dataset.tab); });
+  });
+  show((location.hash || '#overview').slice(1));
+
+  var tip = document.getElementById('tip'), xh = document.getElementById('xh');
+  if (!xh) return;
+  document.querySelectorAll('rect.hit').forEach(function (r) {
+    r.addEventListener('mousemove', function (e) {
+      xh.setAttribute('x1', r.dataset.x); xh.setAttribute('x2', r.dataset.x); xh.setAttribute('visibility', 'visible');
+      tip.textContent = r.dataset.tip; tip.style.display = 'block';
+      tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY - 30) + 'px';
+    });
+    r.addEventListener('mouseleave', function () { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); });
+  });
+})();
+</script>
+</body>
+</html>

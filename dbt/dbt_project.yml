@@ -1,0 +1,21 @@
+name: ga4_ops
+version: "1.0.0"
+profile: ga4_ops
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+
+clean-targets: ["target", "dbt_packages"]
+
+# Day to process. A daily run passes run_date; the one-off full build of staging also passes
+# start_date / end_date (both default to run_date inside the models).
+vars:
+  run_date: "2020-11-30"
+
+models:
+  ga4_ops:
+    staging:
+      +schema: ga4_staging   # same dataset for every target (see macros/generate_schema_name.sql)

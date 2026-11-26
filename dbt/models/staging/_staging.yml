@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: stg_events
+    description: >
+      1행 = GA4 이벤트 1건. 배열을 펼치고 이후 모델에 필요한 컬럼만 남긴다.
+      결함 구간(11/1~11/29, 1/25~1/31)도 보관한다. KPI에서의 제외는 mart에서 한다.
+    columns:
+      - name: event_date
+        description: GA4 속성 시간대 기준 날짜. 파티션 키.
+        tests: [not_null]
+      - name: session_key
+        description: user_pseudo_id + ga_session_id. 세션 1개를 식별한다.
+      - name: session_number
+        description: 같은 브라우저(쿠키)의 몇 번째 세션인가. 1이면 신규 세션.
+      - name: device_group
+        description: desktop / mobile (tablet은 mobile에 포함).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['desktop', 'mobile']
+      - name: transaction_id
+        description: 거래번호. ''와 '(not set)'은 주문이 아니다.
+      - name: purchase_revenue
+        description: 주문 매출(USD). 이 데이터에서는 세금이 포함돼 있지 않다.
+      - name: is_no_tid_purchase
+        description: 거래번호가 없는 구매 이벤트 (매출 유무 무관). DQ2 분자의 재료.
+      - name: is_empty_purchase
+        description: 거래번호도 매출도 없는 구매 이벤트 (빈 구매).

@@ -1,0 +1,3 @@
+incident_id,start_date,end_date,reason
+INC-2020-11,2020-11-01,2020-11-29,"transaction_id not collected (11/1-11/10 100%, 11/11 partial) and add_to_cart missing/unstable until 11/29"
+INC-2021-01,2021-01-25,2021-01-31,"purchase events sent without order info (transaction_id, revenue, items) - 60.8% of purchase sessions on 1/26 rising to 100% on 1/31; 1/25 already 13%"

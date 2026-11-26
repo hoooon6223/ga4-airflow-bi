@@ -1,0 +1,11 @@
+version: 2
+
+seeds:
+  - name: data_incidents
+    description: >
+      수집 결함 구간 목록. 이 기간의 날짜는 KPI 비교 기준(지난주 같은 요일, 7일 평균)에서 자동으로 빠진다.
+      새 사고가 확인되면 한 줄 추가한다.
+    config:
+      column_types:
+        start_date: date
+        end_date: date

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merch Shop 운영 대시보드</title>
+{% include "_style.html" %}
+</head>
+<body>
+<div class="top"><h1>Merch Shop 운영 대시보드</h1><span class="date">날짜별 기록</span></div>
+<main>
+  {% if days %}
+  <p><a href="days/{{ days[0] }}.html">최신: {{ days[0] }} →</a></p>
+  <div class="card">
+    <table>
+      <tr><th>날짜</th></tr>
+      {% for d in days %}<tr><td><a href="days/{{ d }}.html">{{ d }}</a></td></tr>{% endfor %}
+    </table>
+  </div>
+  {% else %}
+  <p>아직 게시된 날짜가 없습니다.</p>
+  {% endif %}
+  <div class="foot">매일 아침 품질 게이트를 통과한 날만 KPI가 게시됩니다. 각 날짜 페이지는 그날 게시된 숫자 그대로 보존됩니다.</div>
+</main>
+</body>
+</html>

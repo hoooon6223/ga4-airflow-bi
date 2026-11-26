@@ -1,0 +1,21 @@
+# secrets
+*.json.key
+*service-account*.json
+.env
+*.env
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+.user.yml
+# airflow
+airflow/logs/
+airflow/plugins/__pycache__/
+# python
+.venv/
+__pycache__/
+*.pyc
+# os
+.DS_Store
+# published separately on the gh-pages branch (its history is the publish record)
+site/

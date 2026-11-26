@@ -1,0 +1,22 @@
+# No secrets here: the key file path comes from GCP_KEYFILE.
+ga4_ops:
+  target: prod
+  outputs:
+    prod:
+      type: bigquery
+      method: service-account
+      keyfile: "{{ env_var('GCP_KEYFILE') }}"
+      project: bigquery-457902
+      dataset: ga4_mart
+      location: US
+      threads: 4
+      job_execution_timeout_seconds: 600
+    test:   # incident replay (e.g. 1/26) writes marts here, never into ga4_mart
+      type: bigquery
+      method: service-account
+      keyfile: "{{ env_var('GCP_KEYFILE') }}"
+      project: bigquery-457902
+      dataset: ga4_mart_test
+      location: US
+      threads: 4
+      job_execution_timeout_seconds: 600
